@@ -1,16 +1,14 @@
-from fastapi import FastAPI
+from typing import List
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 app = FastAPI()
 
 
-@app.get("/")
-async def root() -> dict:
-    return {"message": "Hello World"}
-
-
-@app.get("/hello/{name}")
-async def say_hello(name: str) -> dict:
-    return {"message": f"Hello {name}"}
+class User(BaseModel):
+    id: int
+    name: str
+    age: int
 
 
 users = [
@@ -20,12 +18,31 @@ users = [
 ]
 
 
+@app.get("/users")
+async def get_users() -> List[User]:
+    # buff_objs = []
+    # for user in users:
+    #     buff_objs.append(User(id=user["id"], name=user["name"], age=user["age"]))
+    # return buff_objs
+    return [User(**user) for user in users]
+
+
 @app.get("/users/{user_id}")
 async def get_user(user_id: int) -> dict:
-    curr_user = [user for user in users if user.get("id") == user_id]
-    return curr_user[0]
+    # curr_user = [user for user in users if user.get("id") == user_id]
+    for user in users:
+        if user["id"] == user_id:
+            return user
+    raise HTTPException(status_code=404, detail="User Not Found")
 
 
-@app.get("/users")
-async def get_users() -> list[dict]:
-    return users
+# @app.post("/users", status_code=201)
+# async def create_user(user: [User]):
+#     users.extend(user)
+
+
+@app.delete("/users/{user_id}")
+async def delete_user(user_id: int) -> None:
+    for user in users:
+        if user["id"] == user_id:
+            users.pop(users.index(user))
