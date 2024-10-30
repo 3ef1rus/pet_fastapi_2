@@ -1,7 +1,6 @@
 from typing import List, Optional, Dict
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from pyexpat.errors import messages
 
 app = FastAPI()
 
