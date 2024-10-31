@@ -39,3 +39,10 @@ async def create_work(work: WorkCreate, db: Session = Depends(get_db))->Work:
 
     return db_work
 
+@app.get("/works/",response_model=List[DbWork])
+async def get_works(db: Session = Depends(get_db)):
+    return db.query(Work).all()
+
+@app.get("/users/",response_model=List[DbUser])
+async def get_users(db: Session = Depends(get_db)):
+    return db.query(User).all()
