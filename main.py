@@ -1,6 +1,6 @@
-from typing import List, Optional, Dict
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from typing import List, Optional, Dict, Annotated
+from fastapi import FastAPI, HTTPException, Path, Query
+from pydantic import BaseModel, Field
 
 app = FastAPI()
 
@@ -24,6 +24,11 @@ class UserCreate(BaseModel):
     works_id: Optional[int] = None
 
 
+class WorkCreate(BaseModel):
+    name: Annotated[str, Field(..., min_length=2, title="Название работы")]
+    salary: Annotated[int, Field(..., ge=0, title="Размер зарплаты")]
+
+
 works = [
     {"id": 1, "name": "Programmer", "salary": 3000},
     {"id": 2, "name": "Cleaner", "salary": 750},
@@ -37,7 +42,6 @@ users = [
 ]
 
 
-
 @app.get("/users")
 async def get_users() -> List[User]:
     # buff_objs = []
@@ -48,7 +52,12 @@ async def get_users() -> List[User]:
 
 
 @app.get("/users/search")
-async def search_users(user_id: Optional[int] = None) -> Dict[str, Optional[User]]:
+async def search_users(
+        user_id: Annotated[
+            Optional[int],
+            Query(title="ID of user to search for", gt=-1, le=100)
+        ]
+) -> Dict[str, Optional[User]]:
     if user_id:
         for user in users:
             if user["id"] == user_id:
@@ -58,9 +67,9 @@ async def search_users(user_id: Optional[int] = None) -> Dict[str, Optional[User
         return {"data": None}
 
 
-@app.post("/users/add", status_code=201)
-async def add_user(user: UserCreate) -> User:
-    new_id_user=len(users)+1
+@app.post("/users/create", status_code=201)
+async def create_user(user: UserCreate) -> User:
+    new_id_user = len(users) + 1
     work = next((w for w in works if w["id"] == user.works_id), None)
     if not work:
         raise HTTPException(status_code=404, detail="Work with ID not found")
@@ -70,7 +79,7 @@ async def add_user(user: UserCreate) -> User:
 
 
 @app.put("/users/update/{user_id}")
-async def update_user(user_id:int,user: UserCreate) -> User:
+async def update_user(user_id: int, user: UserCreate) -> User:
     for i, curr_user in enumerate(users):
         if curr_user.get("id") == user_id:
             # Update user fields (excluding unchanged values)
@@ -92,7 +101,9 @@ async def update_user(user_id:int,user: UserCreate) -> User:
 
 
 @app.get("/users/{user_id}")
-async def get_user(user_id: int) -> User:
+async def get_user(
+        user_id: Annotated[int, Path(..., title="Тут указывается id юзера", ge=0)]
+) -> User:
     # curr_user = [user for user in users if user.get("id") == user_id]
     for user in users:
         if user["id"] == user_id:
@@ -107,4 +118,9 @@ async def delete_user(user_id: int) -> None:
             users.pop(users.index(user))
 
 
-
+@app.post("/works/create", status_code=201)
+async def create_work(work: WorkCreate) -> Work:
+    new_id = len(works) + 1
+    new_work = Work(id=new_id, name=work.name, salary=work.salary)
+    works.append(new_work.model_dump())
+    return new_work
