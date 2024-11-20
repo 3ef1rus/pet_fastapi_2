@@ -2,20 +2,12 @@ from typing import List, Optional, Dict, Annotated, Type
 from fastapi import FastAPI, HTTPException, Path, Query, Body, Depends
 from sqlalchemy.orm import Session
 from models import Base, UserDB, WorkDB
-from database import engine, session_local
-from schemas import UserCreate, WorkCreate, User, Work, UserUpdate
+from database import engine, get_db
+from schemas import UserCreate, WorkCreate, User, Work, UserUpdate, WorkUpdate
 
 app = FastAPI()
 
 Base.metadata.create_all(bind=engine)
-
-
-def get_db():
-    db = session_local()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @app.post("/works/create", response_model=Work)
@@ -46,7 +38,7 @@ async def get_users(db: Session = Depends(get_db)) -> list[Type[UserDB]]:
     return db.query(UserDB).all()
 
 
-@app.post("/users/update/{user_id}", response_model=User)
+@app.put("/users/update/{user_id}", response_model=User)
 async def update_user(
     user_id: int, user: UserUpdate, db: Session = Depends(get_db)
 ) -> Type[UserDB]:
@@ -55,7 +47,7 @@ async def update_user(
     if curr_user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    for key, value in user.model_dump().items():
+    for key, value in user.model_dump(exclude_unset=True).items():
         setattr(curr_user, key, value)
     db.add(curr_user)
     db.commit()
@@ -63,15 +55,15 @@ async def update_user(
     return curr_user
 
 
-@app.post("/works/update/{work_id}", response_model=Work)
+@app.put("/works/update/{work_id}", response_model=Work)
 async def update_work(
-    work_id: int, work: WorkCreate, db: Session = Depends(get_db)
+    work_id: int, work: WorkUpdate, db: Session = Depends(get_db)
 ) -> Type[WorkDB]:
     curr_work = db.query(WorkDB).filter(WorkDB.id == work_id).first()
     if curr_work is None:
         raise HTTPException(status_code=404, detail="Work not found")
 
-    for key, value in work.model_dump().items():
+    for key, value in work.model_dump(exclude_unset=True).items():
         setattr(curr_work, key, value)
 
     db.add(curr_work)

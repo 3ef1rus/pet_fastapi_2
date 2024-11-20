@@ -51,6 +51,10 @@ class WorkCreate(WorkBase):
     pass
 
 
+class WorkUpdate(WorkBase):
+    pass
+
+
 class BaseUser(BaseModel):
     name: str
     age: int
